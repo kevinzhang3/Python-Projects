@@ -45,7 +45,7 @@ class music_cog(commands.cog):
         else:
             self.playing = False
 
-    async def start(self, msg):
+    async def start(self, ctx):
         # check for songs
         if len(self.queue) > 0:
 
@@ -59,7 +59,7 @@ class music_cog(commands.cog):
 
                 # send error message if failed to join vc
                 if self.vc == None:
-                    await msg.send("Could not connect to the voice channel.")
+                    await ctx.send("Could not connect to the voice channel.")
                     return
             # move from one vc to another
             else:
@@ -72,6 +72,81 @@ class music_cog(commands.cog):
         else:
             self.playing = False
 
-    @commands.command(name='play', aliases=["p"], help='Play song from YouTube.')
-    async def play(self, msg, *args):
+    # command for user to play music using the bot, can also be called with 'p'
+    @commands.command(name='play', aliases=['p'], help='Play song from YouTube.')
+    async def play(self, ctx, *args):
         query = " ".join(args)
+
+        voice_channel = ctx.author.voice.channel
+        if voice_channel is None:
+            await ctx.send("User must connect to a voice channel.")
+        elif self.is_paused:
+            self.vc.resume()
+        else:
+            song = self.search_yt(query)
+            if type(song) == type(True):
+                await ctx.send("Incorrect format. Try again.")
+            else:
+                await ctx.send("Song added to queue")
+                self.queue.append([song, voice_channel])
+
+                if self.playing == False:
+                    await self.start(ctx) 
+
+    # pause command for user to pause music output, or resume if paused
+    @commands.command(name='pause', help='Pauses the current song, or resumes a paused song.')
+    async def pause(self, ctx, *args):
+        if self.playing:
+            self.playing = False
+            self.paused = True
+            self.vc.pause()
+        elif self.paused:
+            self.playing = True
+            self.paused = False
+            self.vc.resume()
+
+    # resumes current song
+    @commands.command(name='resume', aliases=['r'], help='Resumes output of the current song.')
+    async def resume(self, ctx, *args):
+        if self.paused:
+            self.playing = True
+            self.paused = False
+            self.vc.resume()
+
+    # skips to the next song in queue
+    @commands.command(name='skip', aliases=['s'], help='Skip to the next song in queue.')
+    async def skip(self, ctx, *args):
+        if self.vc != None and self.vc:
+            self.vc.stop()
+            await self.start(ctx)
+    
+    # displays the state of the queue
+    @commands.command(name='queue', aliases=['q'], help='Displays all songs in the queue.')
+    async def queue(self, ctx):
+        output = ""
+
+        # will only print 4
+        for i in range(0, len(self.queue)):
+            if i > 4:
+                break
+            output += self.queue[i][0]['title'] + '\n'  
+        
+        if output != "":
+            await ctx.send(output)
+        else:
+            await ctx.send("The queue is empty.")
+    
+    # clears the queue
+    @commands.command(name='clear', aliases=['c'], help='Clears all songs from queue.')
+    async def clear(self, ctx, *args):
+        if self.vc != None and self.playing:
+            self.vc.stop()
+        self.queue.clear()
+        await ctx.send("Queue has been cleared.")
+
+    # force the bot to leave the current vc
+    @commands.command(name='leave', aliases=['l', 'disconnect'], help='Forces bot out of current voice channel.')
+    async def leave(self, ctx):
+        self.playing = False
+        self.paused = False
+        await self.vc.disconnect()
