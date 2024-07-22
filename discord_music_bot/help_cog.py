@@ -26,7 +26,7 @@ m.resume - resume music
         # go through all guilds
         for guild in self.bot.guilds:
             # iterate through text channels and append to list
-            for channel in guild.text.text_channels:
+            for channel in guild.text_channels:
                 self.text_channel_text.append(channel)
         
         # send help msg to all
