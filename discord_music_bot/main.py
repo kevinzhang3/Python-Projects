@@ -8,6 +8,8 @@ from music_cog import music_cog
 # makes it so all commands must be prefixed with "m."
 bot = commands.Bot(command_prefix="m.")
 
+bot.remove_command("help")
+
 bot.add_cog(music_cog)
 bot.add_cog(help_cog)
 
